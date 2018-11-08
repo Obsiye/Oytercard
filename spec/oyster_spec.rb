@@ -18,16 +18,16 @@ describe Oystercard do
     end
   end
 
-  it 'expects journey array to default to empty' do
-    expect(subject.journeys).to be_empty
-  end
+#   it 'expects journey array to default to empty' do
+#     expect(subject.history.last).to be_empty
+#   end
 
   describe 'touch_in(station)' do
 
     it 'should be able to touch in and start journey' do
       subject.top_up(5)
       subject.touch_in(station)
-      expect(subject.in_journey?).to eq true
+      expect(subject.history.last.entry_station).to eq station
     end
   
     context 'when balance is below minimum balance' do
@@ -40,8 +40,10 @@ describe Oystercard do
 
     it 'should remember entry station' do
       subject.top_up(5)
+      station.stub(:name => "Barbican")
       subject.touch_in(station)
-      expect(subject.entry_station).to eq(station)
+      last_station = subject.history.last
+      expect(last_station.entry_station.name).to eq("Barbican")
     end
 
   end
@@ -52,47 +54,36 @@ describe Oystercard do
       subject.touch_in(station)
     end
     it 'should be able to touch out and stop journey' do
+      station.stub(:name => "Barbican")
       subject.touch_out(station)
-      expect(subject.in_journey?).to eq false
+      last_station = subject.history.last
+      expect(last_station.exit_station.name).to eq "Barbican"
     end
 
     it 'should deduct minimum fare from balance' do
       expect { subject.touch_out(station)}.to change { subject.balance}.from(5).to(4)
     end
 
-    it 'should set entry station to nil' do
-      subject.touch_out(station)
-      expect(subject.entry_station).to eq nil
-    end
-
-    it 'should remember exit station' do
-      subject.touch_out(station)
-      expect(subject.exit_station).to eq(station)
-    end
-
   end
 
-  describe 'in_journey?' do
+  context 'in a journey' do
     before(:each) do
       subject.top_up(5)
+      station.stub(:name => "Wican")
       subject.touch_in(station)
+      @last_station = subject.history.last
     end
         context 'touched in' do
-            it 'journey should be reported as true' do
-                expect(subject.in_journey?).to eq true
+            it 'has current journey entry station' do
+                expect(@last_station.entry_station.name).to eq "Wican"
             end
         end
 
         context 'touched out' do
-            it 'journey should be reported as false' do
+            it 'has exit station in current journey' do
                 subject.touch_out(station)
-                expect(subject.in_journey?).to eq false
+                expect(@last_station.exit_station.name).to eq "Wican"
             end
-        end
-
-        it "saved journey in journey's array" do
-            subject.touch_out(station)
-            expect(subject.journeys).to include({entry_station: station, exit_station: station })
         end
   end
 
